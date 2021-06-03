@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <h2>Function Information</h2>
+    <ul>
+      {{#each context}}
+      <li><h3>{{@key}}: {{this}}</h3></li>
+      {{/each}}
+    </ul>
+    {{#with error}}
+      <h2>Error Details</h2>
+      <h3>Type: {{class}}</h3>
+      <code>{{message}}</code>
+    {{else}}
+      {{#if message}}
+        <h2>Log Message{{#if level}} ({{level}}){{/if}}</h2>
+        <code>{{message}}</code>
+      {{/if}}
+    {{/with}}
+    <h2>Helpful Links</h2>
+    <ul>
+      {{#each links}}
+      <li><h3><a href="{{this.location}}">{{this.text}}</a></h3></li>
+      {{/each}}
+    </ul>
+  </body>
+</html>

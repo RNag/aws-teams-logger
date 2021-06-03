@@ -1,0 +1,2 @@
+include README.md LICENSE HISTORY.md
+recursive-include aws_teams_logger/utils/aws/ses/templates *.html

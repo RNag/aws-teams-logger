@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:400,700">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>{{function_type}} Failure</title>
+  <style>
+    header {
+      font-family: Nunito, sans-serif;
+      grid-area: header;
+      color: #ffffff;
+      background-color: #DC143C;
+      padding: 1px;
+      text-align: center;
+    }
+
+    .grid {
+      background-color: #D0D1CD;
+      display: grid;
+      padding: 5px;
+      margin: auto;
+      max-width: 600px;
+      grid-template-areas:
+        "header   header    header    header"
+        "sidebar  context   context   context";
+    }
+
+
+    .context {
+      font-family: Nunito, sans-serif;
+      grid-area: context;
+      padding-left: 5px;
+    }
+
+    .sidebar {
+      font-family: Nunito, sans-serif;
+      grid-area: sidebar;
+      padding-left: 5px;
+      padding-right: 5px;
+    }
+
+    .key {
+      font-size: smaller;
+      color: #8A4D76;
+    }
+
+    .value {
+      color: #757763;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="grid">
+    <header>
+      <h2>Help, a {{function_type}} failed!</h2>
+    </header>
+    <div class="context">
+      <h3>Function Context</h3>
+      {{#each context}}
+      <p><span class="key">{{@key}}</span><br />{{this}}</p>
+      {{/each}}
+    </div>
+    <div class="sidebar">
+      {{#if account}}
+        <h3>Account</h3>
+        {{#each account}}
+        <p><span class="key">{{@key}}</span><br /><span class="value">{{this}}</span></p>
+        {{/each}}
+      {{/if}}
+      {{#if links}}
+        <h3>Helpful Links</h3>
+        {{#each links}}
+        <p><a href="{{this.location}}">{{this.text}}</a></p>
+        {{/each}}
+      {{/if}}
+    </div>
+</body>
+
+</html>
