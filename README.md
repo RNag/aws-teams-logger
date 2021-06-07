@@ -34,12 +34,13 @@ from aws_teams_logger import LambdaLogger
 from logging import getLogger
 from typing import Dict, Any
 
-log = getLogger()
+log = getLogger(__name__)
 log.setLevel('INFO')
 
-# Logs from this library should show up in CloudWatch by default. This increases
-# the minimum log level for which the library logs will appear in CloudWatch.
-getLogger('aws_teams_logger').setLevel('WARNING')
+# By default, only logs from this library at the 'WARNING' level and above
+# should show up in CloudWatch. This specifies the minimum log level at which
+# library logs appear in CloudWatch.
+# getLogger('aws_teams_logger').setLevel('INFO')
 
 # Note: this is a simplified example, and assumes you define the required
 # environment variables. Otherwise, you'd need to pass the parameters
