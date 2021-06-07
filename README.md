@@ -6,7 +6,7 @@ who may need to be notified; the emails use HTML formatting which is
 originally designed for MS Outlook and Teams. This library is primarily intended
 for use in an AWS environment.
 
-This package exposes the below decorator methods which handle the posting
+This package exposes the below decorator classes which handle the posting
 of **warning** level or above log messages by default (via the builtin `logging` module)
 to a specified Microsoft Teams channel. Log messages with an `exc_info` parameter,
 as well as any uncaught exceptions, will also be sent to a list of Dev Emails (if provided)
@@ -31,16 +31,15 @@ Simple Usage for a stand-alone AWS Lambda function:
 
 ```python3
 from aws_teams_logger import LambdaLogger
-from logging import getLogger, basicConfig
+from logging import getLogger
 from typing import Dict, Any
 
 log = getLogger()
 log.setLevel('INFO')
 
-# Logs from this library won't show up by default. This will enable reporting
-# of logs above a specified level. You can alternatively define the 'LOG_CFG'
-# environment variable, which does the same thing.
-basicConfig(level='WARNING')
+# Logs from this library should show up in CloudWatch by default. This increases
+# the minimum log level for which the library logs will appear in CloudWatch.
+getLogger('aws_teams_logger').setLevel('WARNING')
 
 # Note: this is a simplified example, and assumes you define the required
 # environment variables. Otherwise, you'd need to pass the parameters
@@ -107,6 +106,11 @@ import logging
 from aws_teams_logger import TaskLogger
 
 log = logging.getLogger(__name__)
+
+# Logs from this library won't show up by default. This will enable reporting
+# of logs above a specified level. You can alternatively define the 'LOG_CFG'
+# environment variable, which does the same thing.
+logging.basicConfig(level='WARNING')
 
 class MyTaskClass:
 
