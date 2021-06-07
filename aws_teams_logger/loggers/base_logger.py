@@ -1,5 +1,8 @@
 import functools
 import logging
+import sys
+import traceback
+from io import StringIO
 from typing import Optional, Tuple, Dict, Any, List, Callable, Union
 
 import boto3
@@ -50,9 +53,10 @@ class _BaseLogger:
         Create and return a :class:`_BaseLogger` object.
 
         This defines a decorator method which handles the posting of warning
-        level or above log messages (used via the builtin ``logging`` module),
-        as well as any uncaught exceptions, to a specified Microsoft Teams
-        channel.
+        level or above log messages (used via the builtin ``logging`` module)
+        to a specified Microsoft Teams channel. Log messages with an `exc_info`,
+        as well as any uncaught exceptions, will also be sent to an optional
+        list of Developer Emails via Microsoft Outlook.
 
         This is an abstract class and should not be used directly. Instead,
         please import the concrete sub-classes which implement all required
@@ -120,23 +124,31 @@ class _BaseLogger:
 
         Simple Usage:
 
-            log = logging.getLogger(__name__)
+            >>> from aws_teams_logger import LambdaLogger
 
-            @LambdaLogger()
-            def my_lambda_handler(event: Dict[str, Any], context: Any):
-                ...
-                other_func()
-                ...
+            >>> log = logging.getLogger(__name__)
 
-            def other_func():
+            >>> @LambdaLogger
+            >>> def my_lambda_handler(event: Dict[str, Any], context: Any):
+                >>> ...
+                >>> other_func()
+                >>> ...
+
+            >>> def other_func():
                 # Message is not logged to Teams (default log level is "WARN")
-                log.info('Info level log')
+                >>> log.info('Info level log')
                 # This message will be forwarded to Teams
-                log.warn('Sample Warn message')
-                # Errors will also be logged to Teams - below call results in
-                # a `KeyError` which is forwarded to the Teams channel
-                empty_dict = {}
-                value = empty_dict['missing key']
+                >>> log.warning('Sample Warn message')
+                # Messages with the `exc_info` parameter will be logged to both
+                # the Teams Channel and any subscribed Dev Emails via Outlook
+                >>> try:
+                    >>> empty_dict = {}
+                    >>> value = empty_dict['missing key']
+                >>> except KeyError:
+                    >>> log.error('Key missing from `empty_dict`', exc_info=True)
+                # Uncaught errors will be logged to both Teams and any Dev Emails
+                >>> finally:
+                    >>> result = 1 / 0
 
         For ECS Tasks:
 
@@ -152,21 +164,23 @@ class _BaseLogger:
 
             Usage for Tasks:
 
-                log = logging.getLogger(__name__)
+                >>> from aws_teams_logger import TaskLogger
 
-                class MyTaskClass:
+                >>> log = logging.getLogger(__name__)
 
-                    @classmethod
-                    @TaskLogger()
-                    def my_task_func(cls, *args, **kwargs):
-                        ...
-                        cls.other_func()
-                        ...
-
-                    @staticmethod
-                    def other_func():
+                >>> class MyTaskClass:
+                    >>>
+                    >>> @classmethod
+                    >>> @TaskLogger
+                    >>> def my_task_func(cls, *args, **kwargs):
+                        >>> ...
+                        >>> cls.other_func()
+                        >>> ...
+                    >>>
+                    >>> @staticmethod
+                    >>> def other_func():
                         # See logging example under "Simple Usage" section above
-                        ....
+                        >>> ...
 
         """
         # Copy over global defaults
@@ -220,15 +234,15 @@ class _BaseLogger:
 
                 except Exception as e:
                     if hasattr(e, 'code') and hasattr(e, 'message'):
-                        # :class:`APDailyError` objects are already logged to
-                        # Teams - see base class
+                        # Exceptions with :attr:`code` and :attr:`message` in our case
+                        # should already be logged to Teams
                         self.log_err('Failure, err_code=%s, err_msg=%s',
                                      e.code, e.message, exc_info=e)
 
                     else:
                         self.log_err('Failure: %s', str(e), exc_info=e)
                         # Send lambda failure to Teams
-                        self._send_to_ses(error=e)
+                        self._send_to_ses(error=self._format_exception(e))
 
                     if self.raise_:
                         raise
@@ -424,8 +438,8 @@ class _BaseLogger:
 
                 send_kwargs = {'msg': get_formatted_message(msg, msg_args),
                                'lvl': level}
-                if exc_info and isinstance(exc_info, Exception):
-                    send_kwargs['error'] = exc_info
+                if exc_info:
+                    send_kwargs['error'] = self._format_exception(exc_info)
 
                 self._send_to_ses(**send_kwargs)
 
@@ -434,7 +448,50 @@ class _BaseLogger:
 
         return new_log_func
 
-    def _send_to_ses(self, *, msg=None, lvl=None, error=None):
+    @staticmethod
+    def _format_exception(exc_info):
+        """
+        Format `exc_info` or current exception info as a tuple of
+        (type, value, traceback).
+
+        Copied from the ``logging`` module for now.
+
+        """
+        if isinstance(exc_info, BaseException):
+            return type(exc_info), exc_info, exc_info.__traceback__
+        elif not isinstance(exc_info, tuple):
+            return sys.exc_info()
+        return exc_info
+
+    @classmethod
+    def _get_msg_with_exc_trace(cls, exc_info, msg: Optional[str] = None):
+        """
+        Get error message with the error traceback included.
+        Copied directly from the ``logging`` module for now.
+
+        TODO: Perhaps update to decorate `Logger.handle` method instead,
+            that way we can get the formatted `exc_info` directly.
+        """
+        def _format_exc_traceback(ei) -> str:
+            sio = StringIO()
+            tb = ei[2]
+            traceback.print_exception(ei[0], ei[1], tb, None, sio)
+            s = sio.getvalue()
+            sio.close()
+            if s[-1:] == '\n':
+                s = s[:-1]
+            return s
+
+        if exc_info:
+            exc_info = cls._format_exception(exc_info)
+            exc_text = _format_exc_traceback(exc_info)
+            if exc_text:
+                return f'{msg.strip()}\n\n{exc_text}' if msg else exc_text
+
+        return msg
+
+    def _send_to_ses(self, *, msg: Optional[str] = None, lvl: Optional[str] = None,
+                     error=None):
         """
         Forwards a log message `msg` logged at `lvl` or an exception `error` to
         the Teams channel
@@ -456,14 +513,17 @@ class _BaseLogger:
         if error:
             self._notify_dev_emails()
 
-            send_data['error'] = {
-                'class': type(error).__name__,
-                'message': msg or getattr(error, 'message', str(error))
-            }
+            error_msg_with_tb = self._get_msg_with_exc_trace(error, msg)
 
-        if lvl:
-            send_data['level'] = logging._levelToName.get(
-                lvl, logging.ERROR).capitalize()
+            if lvl:
+                lvl_name = logging._levelToName.get(lvl, logging.ERROR)
+                error_msg_with_tb = f'[{lvl_name.upper()}] {error_msg_with_tb}'
+                send_data['level'] = lvl_name.capitalize()
+
+            send_data['error'] = {
+                'class': error[0].__name__,
+                'message': getattr(error[1], 'message', error_msg_with_tb)
+            }
 
         self._send_templated_email('send-to-teams', send_data, self.teams_email)
 

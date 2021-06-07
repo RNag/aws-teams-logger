@@ -6,6 +6,20 @@ dev
 
 -   \[Short description of non-trivial change.\]
 
+0.4.0 (2021-06-07)
+------------------
+
+**Features and Improvements**
+-   Log messages that contain an `exc_info` parameter should
+    now be sent to both Teams and any subscribed Dev emails.
+    The messages also be properly formatted with the exception
+    traceback info (thanks to the `logging` module)
+
+**Important Notes**
+-   The SES template `send-to-teams` has been updated;
+    it's recommended that users update the SES template via a
+    `upload_templates` call.
+
 0.3.0 (2021-06-03)
 ------------------
 

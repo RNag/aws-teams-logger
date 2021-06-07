@@ -24,8 +24,14 @@ Simple Usage for an AWS Lambda function:
     >>> def my_lambda_handler(event, context):
     >>>   # This message can be sent to Teams, depending on the enabled log lvl
     >>>   log.info('Hello world!')
-    >>>   # This will forward the error to Teams, and notify any Devs via email
-    >>>   result = 1 / 0
+    >>>   try:
+    >>>     result = 1 / 0
+    >>>   except ZeroDivisionError:
+    >>>     # This will forward the error to Teams, and notify any Devs via email
+    >>>     log.error('Unable to divide by zero', exc_info=True)
+    >>>     # Be sure not to re-raise the exception as below, as that will log
+    >>>     # a duplicate message to Teams and Outlook
+    >>>     # raise
 
 
 Please see the docs for additional examples and some important how-to's.

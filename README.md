@@ -4,13 +4,13 @@ AWS Teams Logger is a Python library that forwards errors (failures) and log
 messages to a MS Teams channel, and an optional list of *Developer Emails*
 who may need to be notified; the emails use HTML formatting which is
 originally designed for MS Outlook and Teams. This library is primarily intended
-for use in the AWS ecosystem.
+for use in an AWS environment.
 
 This package exposes the below decorator methods which handle the posting
 of **warning** level or above log messages by default (via the builtin `logging` module)
-to a specified Microsoft Teams channel. Note that any unhandled exceptions will also be
-sent to an list of dev emails (if provided) in addition to being logged to
-the Teams channel.
+to a specified Microsoft Teams channel. Log messages with an `exc_info` parameter,
+as well as any uncaught exceptions, will also be sent to a list of Dev Emails (if provided)
+in addition to being logged to the Teams channel.
 
 **Available Decorators**:
 
@@ -52,10 +52,17 @@ def other_func():
     # Message is not logged to Teams (default log level is "WARN")
     log.info('Info level log')
     # This message will be forwarded to Teams
-    log.warn('Sample Warn message')
-    # This will forward the error to Teams, and notify any Devs via email
-    empty_dict = {}
-    value = empty_dict['missing key']
+    log.warning('Sample Warn message')
+    # Messages with the `exc_info` parameter will be logged to both
+    # the Teams Channel and any subscribed Dev Emails via Outlook
+    try:
+        empty_dict = {}
+        value = empty_dict['missing key']
+    except KeyError:
+        log.error('Key missing from `empty_dict`', exc_info=True)
+    # Uncaught errors will be logged to both Teams and any Dev Emails
+    finally:
+        result = 1 / 0
 ```
 
 ... or for a module with multiple handlers, common for serverless projects with
@@ -71,15 +78,16 @@ ll = LambdaLogger(enabled_lvl='WARNING')
 def my_handler_1(event, context):
     # This message won't be sent to Teams, as the minimum lvl here is 'WARNING'
     log.info('Hello world!')
-    # This will result in a ZeroDivisionError, which will be forwarded
-    # to Teams and also any Devs via email
-    result = 1 / 0
+    # Build a custom Exception object - a `ValueError` in this case -
+    # which will be forwarded to Teams and also any Devs via email
+    err = ValueError('My sample error details.')
+    log.error('This is an error log with a sample exception object', exc_info=err)
 
 def my_handler_2(event, context):
     # This message will be sent to Teams by default, though this behavior
-    # can be overridden via the 'TEAMS_LOG_LVL' environment variable defined
-    # for the lambda.
-    log.error('Help! something went wrong')
+    # can be overridden via the 'enabled_lvl' parameter above, or alternatively
+    # via the 'TEAMS_LOG_LVL' environment variable defined for the lambda.
+    log.warning('Help! something went wrong')
 
 # Now, decorate all the lambda handlers declared above
 ll.decorate_all_functions(ses_identity='my@identity.org',

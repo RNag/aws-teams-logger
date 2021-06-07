@@ -16,7 +16,7 @@ def test_basic_log_to_teams(mock_context):
 
     @LambdaLogger(enabled_lvl='INFO', raise_=False)
     def lambda_handler(_event, _context):
-        log.info('Info log')
+        log.info('%s log', 'Info')
         # Should not be logged to teams, but will show in console logs
         log.debug('Debug log')
 
@@ -31,9 +31,34 @@ def test_basic_log_to_teams_without_parens(mock_context):
     @LambdaLogger
     def lambda_handler(_event, _context):
         # Should not be logged to teams, but will show in console logs
-        log.info('Info log')
+        log.info('%s log', 'Info')
         # will be logged to Teams (default level is WARNING)
         log.warning('Warning log')
+
+    lambda_handler(None, mock_context)
+
+
+def test_basic_log_to_teams_with_exc_info(mock_context):
+    """
+    Confirm messages are properly formatted and logged to teams and outlook
+    when the `exc_info` parameter is passed.
+    """
+
+    @LambdaLogger
+    def lambda_handler(_event, _context):
+        # Log messages with a custom :class:`Exception` object should be
+        # forwarded to both Teams and any subscribed Dev Emails.
+        err = ValueError('My sample error details.')
+        log.error('This is a sample error log', exc_info=err)
+
+        try:
+            1 / 0
+        except ZeroDivisionError as e:
+            # Should not be logged to teams, but will show in console logs
+            log.info('%s log', 'Info', exc_info=e)
+            # will be logged to Teams and Outlook (default level is WARNING)
+            log.warning('Warning log', exc_info=e)
+            log.error('Error log', exc_info=True)
 
     lambda_handler(None, mock_context)
 

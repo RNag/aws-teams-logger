@@ -10,7 +10,8 @@
     {{#with error}}
       <h2>Error Details</h2>
       <h3>Type: {{class}}</h3>
-      <code>{{message}}</code>
+      <h3>Message with Error Trace:</h3>
+      <pre>{{message}}</pre>
     {{else}}
       {{#if message}}
         <h2>Log Message{{#if level}} ({{level}}){{/if}}</h2>

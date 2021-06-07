@@ -22,17 +22,13 @@ flake8:
 	flake8 --ignore=E501,F401,E128,E402,E731,F821 ${PACKAGE}
 
 bump-patch:
-    # Ref: https://stackoverflow.com/a/39950969/10237506
-	@current_version=$$(python3 -c "from ${PACKAGE}.__version__ import __version__ as v; print(v)"); \
-	bumpversion --allow-dirty --current-version $${current_version} patch ${PACKAGE}/__version__.py
+	bumpversion --allow-dirty patch ${PACKAGE}/__version__.py
 
 bump-minor:
-	@current_version=$$(python3 -c "from ${PACKAGE}.__version__ import __version__ as v; print(v)"); \
-	bumpversion --allow-dirty --current-version $${current_version} minor ${PACKAGE}/__version__.py
+	bumpversion --allow-dirty minor ${PACKAGE}/__version__.py
 
 bump-major:
-	@current_version=$$(python3 -c "from ${PACKAGE}.__version__ import __version__ as v; print(v)"); \
-	bumpversion --allow-dirty --current-version $${current_version} major ${PACKAGE}/__version__.py
+	bumpversion --allow-dirty major ${PACKAGE}/__version__.py
 
 coverage:
 	pytest --cov-config .coveragerc --verbose --cov-report term --cov-report html --cov=${PACKAGE} tests
