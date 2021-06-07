@@ -121,7 +121,7 @@ class LambdaLogger(_BaseLogger):
         log_stream_name = self.context.log_stream_name
 
         account_id = self.context.invoked_function_arn.split(':')[4]
-        account_name = self._get_account_name(account_id)
+        account_name = self._get_account_name()
 
         context = {'Function Name': self.context.function_name,
                    'Request Id': self.context.aws_request_id,

@@ -45,6 +45,11 @@ __all__ = [
     'delete_templates'
 ]
 
+import logging
 
 from .loggers import *
 from .utils.aws.ses.templates import *
+
+# Set up logging to ``/dev/null`` like a library is supposed to.
+# http://docs.python.org/3.3/howto/logging.html#configuring-logging-for-a-library
+logging.getLogger('aws_teams_logger').addHandler(logging.NullHandler())

@@ -61,7 +61,7 @@ class TaskLogger(_BaseLogger):
                 ecs_cluster_parts = ecs_cluster_info.split(':')
                 aws_region = ecs_cluster_parts[3]
                 account_id = ecs_cluster_parts[4]
-                account_name = self._get_account_name(account_id)
+                account_name = self._get_account_name()
                 cluster_name = ecs_cluster_parts[-1].split('/', 1)[-1]
                 # Add account details to context
                 context.update({'Account Name': account_name,

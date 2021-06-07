@@ -1,14 +1,14 @@
 import os
 
-__all__ = ['LOG_LEVEL', 'AWS_ACCOUNT_NAME',
+__all__ = ['LOG_CFG', 'AWS_ACCOUNT_NAME',
            'TEAMS_LOG_LVL', 'TEAMS_EMAIL',
            'SES_IDENTITY', 'DEV_EMAILS',
            'SOURCE_CODE', 'AWS_LOG_GROUP',
            'LOCAL_TZ']
 
 
-# Minimum level for logs to CloudWatch
-LOG_LEVEL = os.getenv('LOG_LEVEL', 'DEBUG')
+# Minimum level for library logs, to show up in CloudWatch
+LOG_CFG = os.getenv('LOG_CFG')
 
 # AWS Account Alias (name), can be optionally set in the environment
 #

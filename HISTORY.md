@@ -6,6 +6,24 @@ dev
 
 -   \[Short description of non-trivial change.\]
 
+0.5.0 (2021-06-07)
+------------------
+
+**Features and Improvements**
+-   Log messages from this library should now be hidden by default, thanks to
+    the `logging.NullHandler`
+-   Library logs should also use the original (un-decorated) `logging` methods,
+    to ensure that logs are only sent to CloudWatch, provided logging is properly configured.
+    This ensures that messages logged by this library are never sent to MS Teams or Outlook.
+-   Add test cases to confirm the above functionality
+-   Add helper function `original_logger` to return the original (un-decorated) Logger
+    object.
+
+**Bugfixes**
+-   Fix logging usage for the library to replace any unintentional `print` statements
+    with the proper `logging` calls
+-   The `_BaseLogger._get_account_name` method should not require an argument anymore
+
 0.4.0 (2021-06-07)
 ------------------
 

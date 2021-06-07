@@ -2,6 +2,7 @@ from logging import getLogger
 
 import pytest
 
+from aws_teams_logger.log import LOG
 from aws_teams_logger.loggers import LambdaLogger, TaskLogger
 from .conftest import get_mock_context
 
@@ -34,6 +35,19 @@ def test_basic_log_to_teams_without_parens(mock_context):
         log.info('%s log', 'Info')
         # will be logged to Teams (default level is WARNING)
         log.warning('Warning log')
+
+    lambda_handler(None, mock_context)
+
+
+def test_original_log_method_does_not_log_to_teams(mock_context):
+    """
+    Test case to confirm that the original (un-decorated) log method
+    should not log messages to MS Teams or Outlook
+    """
+    @LambdaLogger
+    def lambda_handler(_event, _context):
+        # If this is switched with :attr:`log`, the error should be sent to Teams
+        LOG.error('This message should not be logged to Teams')
 
     lambda_handler(None, mock_context)
 

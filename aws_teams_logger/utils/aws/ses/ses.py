@@ -4,7 +4,7 @@ from typing import Union, List, Dict, Any
 
 from aws_teams_logger.log import LOG
 from ..client_cache import ClientCache
-from ...decorators import record_time
+from ...decorators import log_time
 from ...types import as_list
 
 
@@ -17,7 +17,7 @@ class SESHelper(ClientCache):
         """Check if response indicates an operation was a success"""
         return response.get('ResponseMetadata', {}).get('HTTPStatusCode') == 200
 
-    @record_time
+    @log_time
     def send_templated_email(self,
                              name: str, data: Dict[str, Any],
                              to_addresses: Union[List[str], str],
@@ -52,7 +52,7 @@ class SESHelper(ClientCache):
             LOG.warning(e)
             return False
 
-    @record_time
+    @log_time
     def update_template(self, template_data: Dict[str, Any]) -> bool:
         """Update an SES template"""
         response = self.client.update_template(
@@ -61,7 +61,7 @@ class SESHelper(ClientCache):
 
         return self._op_is_success(response)
 
-    @record_time
+    @log_time
     def create_template(self, template_data: Dict[str, Any]) -> bool:
         """Create a new SES template"""
         response = self.client.create_template(
@@ -70,7 +70,7 @@ class SESHelper(ClientCache):
 
         return self._op_is_success(response)
 
-    @record_time
+    @log_time
     def delete_template(self, template_name: str) -> bool:
         """Delete an SES template"""
 
@@ -80,7 +80,7 @@ class SESHelper(ClientCache):
 
         return self._op_is_success(response)
 
-    @record_time
+    @log_time
     def get_template(self, name: str) -> bool:
         """Get an SES template"""
         response = self.client.get_template(
@@ -89,7 +89,7 @@ class SESHelper(ClientCache):
 
         return response
 
-    @record_time
+    @log_time
     def test_render_template(self, name: str, data: Dict[str, Any],
                              html_file_name='email_body.html') -> bool:
         """

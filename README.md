@@ -31,11 +31,16 @@ Simple Usage for a stand-alone AWS Lambda function:
 
 ```python3
 from aws_teams_logger import LambdaLogger
-from logging import getLogger
+from logging import getLogger, basicConfig
 from typing import Dict, Any
 
 log = getLogger()
 log.setLevel('INFO')
+
+# Logs from this library won't show up by default. This will enable reporting
+# of logs above a specified level. You can alternatively define the 'LOG_CFG'
+# environment variable, which does the same thing.
+basicConfig(level='WARNING')
 
 # Note: this is a simplified example, and assumes you define the required
 # environment variables. Otherwise, you'd need to pass the parameters
@@ -257,7 +262,7 @@ Note that the resolution order is from left to right.
 | `AWS_ACCOUNT_NAME` | `set_account_name()` | my-account-dev | AWS Account Alias. If defined, will be used instead of making a call to `iam:ListAccountAliases` to retrieve the alias of the current AWS account. |
 | `SOURCE_CODE` | - | https://github.com/abc/repo | A link to the source code repo (such as Bitbucket) for the project. |
 | `AWS_LOG_GROUP` | - | my-cw-log-group | Only applies when the `TaskLogger` decorator is used. Determines the log group to link to in the AWS console. Generally this is not needed to be specified (see note on 'ECS Tasks' below) |
-| `LOG_LEVEL` | - | DEBUG | The minimum log level for messages logged by this library; only determines if they show up in CloudWatch
+| `LOG_CFG` | - | INFO | If specified, sets up logging via `logging.basicConfig`. Also determines the minimum level at which messages logged by this library show up in CloudWatch. If this is a valid path to a file, the contents will be passed to `logging.config.dictConfig` instead. 
 | `LOCAL_TZ` | - | US/Eastern | User's local time zone, passed in to `pytz.timezone`; used when generating the date/time in the subject for a Teams or Devs email message.
 
 ### Advanced Config

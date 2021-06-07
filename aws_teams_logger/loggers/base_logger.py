@@ -1,5 +1,6 @@
 import functools
 import logging
+import logging.config
 import sys
 import traceback
 from io import StringIO
@@ -10,11 +11,11 @@ from botocore.exceptions import ClientError
 
 from .globals import Globals
 from ..constants import *
-from ..log import LOG
+from ..log import LOG, setup_logging, original_log_method
 from ..models import _BaseContext
 from ..utils.aws.ses import SESHelper
 from ..utils.date_util import local_now
-from ..utils.decorators import record_time
+from ..utils.decorators import log_time
 from ..utils.types import get_formatted_message
 
 
@@ -27,11 +28,6 @@ class _BaseLogger:
     #
     # For example, 'Lambda' indicates an AWS Lambda function.
     FUNCTION_TYPE = 'Base'
-
-    # Contains the original logger methods, by default for the `logging` module
-    #
-    # Note: don't directly modify this object
-    _ORIGINAL_LOG_METHODS = {}
 
     # Checks whether required vars are validated (either defined in environment
     # or passed in as parameters). This should only be run once for all
@@ -187,6 +183,8 @@ class _BaseLogger:
         Globals.ses_identity = ses_identity
         Globals.teams_email = teams_email
         Globals.dev_emails = dev_emails
+        # Setup logging config
+        setup_logging()
 
         self._func = f
         functools.update_wrapper(self, self._func)
@@ -210,9 +208,7 @@ class _BaseLogger:
 
         """
         # Get original (e.g. un-decorated) log method
-        log_method = _BaseLogger._ORIGINAL_LOG_METHODS.setdefault(
-            f'{self.logger_cls.__name__}.{self.log_func_name}',
-            getattr(self.logger_cls, self.log_func_name))
+        log_method = original_log_method(self.logger_cls, self.log_func_name)
         # Validate any required vars here, so we don't run into errors later
         # when the emails need to be sent.
         self._validate_vars_if_needed()
@@ -236,11 +232,11 @@ class _BaseLogger:
                     if hasattr(e, 'code') and hasattr(e, 'message'):
                         # Exceptions with :attr:`code` and :attr:`message` in our case
                         # should already be logged to Teams
-                        self.log_err('Failure, err_code=%s, err_msg=%s',
-                                     e.code, e.message, exc_info=e)
+                        LOG.error('Failure, err_code=%s, err_msg=%s',
+                                  e.code, e.message, exc_info=e)
 
                     else:
-                        self.log_err('Failure: %s', str(e), exc_info=e)
+                        LOG.error('Failure: %s', str(e), exc_info=e)
                         # Send lambda failure to Teams
                         self._send_to_ses(error=self._format_exception(e))
 
@@ -262,29 +258,6 @@ class _BaseLogger:
             return decorator
 
         return decorator(func)
-
-    @classmethod
-    def original_log_func(cls, log_lvl: str) -> Callable:
-        """
-        Returns the original (un-decorated) logger method.
-
-        For example, passing log_lvl='INFO' returns the original
-        :func:`LOG.info` method.
-
-        """
-        original_log_method = _BaseLogger._ORIGINAL_LOG_METHODS.get(
-            'Logger._log', getattr(LOG, '_log'))
-
-        def log(msg, *args, **kwargs):
-            return original_log_method(
-                LOG, logging._nameToLevel[log_lvl], msg, args, **kwargs)
-
-        return log
-
-    @property
-    def log_err(self) -> Callable:
-        """Returns an un-decorated error-level logger method."""
-        return self.original_log_func('ERROR')
 
     @property
     def ses(self):
@@ -311,7 +284,7 @@ class _BaseLogger:
         _BaseLogger._VALIDATED = False
 
     @classmethod
-    def _get_account_name(cls, account_id: Union[int, str]):
+    def _get_account_name(cls):
         """
         Retrieve the human-readable account name to show in logs for a given
         AWS Account ID.
@@ -341,20 +314,16 @@ class _BaseLogger:
 
             # Retrieve the alias from an `iam:ListAccountAliases` API call
             try:
-                log_msg = 'Retrieved the AWS account alias from IAM'
-                log_info = cls.original_log_func('INFO')
-
-                @record_time(log_message=log_msg, log_func=log_info)
+                @log_time(log_message='Retrieved the AWS account alias from IAM')
                 def get_account_alias_from_iam():
                     return boto3.client('iam').list_account_aliases()['AccountAliases'][0]
 
                 return get_account_alias_from_iam()
 
             except Exception as e:
-                log_err = cls.original_log_func('ERROR')
-                log_err('Unable to retrieve the account alias, please ensure '
-                        'the attached role has the necessary permissions '
-                        '(iam:ListAccountAliases). Error: %s', e)
+                LOG.error('Unable to retrieve the account alias, please ensure '
+                          'the attached role has the necessary permissions '
+                          '(iam:ListAccountAliases). Error: %s', e)
 
                 return default_alias
 
@@ -430,12 +399,6 @@ class _BaseLogger:
                          exc_info=None, *args, **kwargs):
 
             if level >= self.enabled_lvl:
-                # Fix: Botocore info-level log when credentials are found results
-                # in an infinite recursion loop due to the following SES call
-                logger_name = self_.name
-                if logger_name and logger_name == 'botocore.credentials':
-                    return
-
                 send_kwargs = {'msg': get_formatted_message(msg, msg_args),
                                'lvl': level}
                 if exc_info:
@@ -567,10 +530,9 @@ class _BaseLogger:
         Sends a templated email using SES. If an error occurs, log a message if
         the error is a known one, otherwise raise the original error.
 
-        :param name:
-        :param data:
-        :param to_addresses:
-        :return:
+        :param name: Name of the SES template
+        :param data: Template data as a dictionary object
+        :param to_addresses: List of recipients for the email
         """
         try:
             self.ses.send_templated_email(name, data, to_addresses,
@@ -581,7 +543,7 @@ class _BaseLogger:
             error_code = error.get('Code', 'Unknown')
 
             if error_code == 'TemplateDoesNotExist':
-                self.log_err(
+                LOG.error(
                     f'Template {name} does not exist; please call '
                     f'`upload_templates` to upload the required SES templates.')
             else:

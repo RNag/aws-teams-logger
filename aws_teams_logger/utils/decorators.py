@@ -3,6 +3,8 @@ Project-specific decorators
 """
 import functools
 from datetime import timedelta
+from logging import Logger
+from typing import Optional
 
 from .time_util import preferred_clock
 from ..log import LOG
@@ -44,5 +46,17 @@ def record_time(f=None, log_message: str = None, log_func=print):
     return decorator
 
 
-# Decorator to log the execution time using a `logger` object instead
-log_time = functools.partial(record_time, log_func=LOG.info)
+def log_time(f=None, logger: Logger = LOG, log_method='info',
+             log_message: Optional[str] = None):
+    """
+    Decorator to log the execution time using a `logger` object instead
+
+    :param logger: Optional Logger object, defaults to the root library logger
+      if not provided.
+    :param log_method: Log method to send messages to, defaults to the 'info'
+      method if not provided.
+    :param log_message: a message that can be specified to replace the default
+      one, that logs in the format "Successfully ran task {func_name}"
+
+    """
+    return record_time(f, log_func=getattr(logger, log_method), log_message=log_message)
