@@ -1,10 +1,9 @@
 import inspect
-import os
 from typing import Dict, Any, List, Tuple, Optional
 
 from .base_logger import _BaseLogger
 from .globals import Globals
-from ..constants import SOURCE_CODE
+from ..constants import AWS_REGION, SOURCE_CODE
 from ..log import LOG
 from ..models import LambdaContext
 
@@ -110,7 +109,6 @@ class LambdaLogger(_BaseLogger):
     def _get_context_and_links(self) -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
         links = []
         aws_root = 'https://console.aws.amazon.com'
-        aws_region = os.getenv('AWS_REGION', 'us-east-1')
 
         if isinstance(self.context, LambdaContext):
             # Mock lambda context (lambda function has an empty or missing
@@ -132,13 +130,13 @@ class LambdaLogger(_BaseLogger):
             links.append({'location': SOURCE_CODE, 'text': 'Link to Source'})
 
         links.append({
-            'location': f'{aws_root}/lambda/home?region={aws_region}#/'
+            'location': f'{aws_root}/lambda/home?region={AWS_REGION}#/'
                         f'functions/{self.context.function_name}',
             'text': 'Link to Lambda'
         })
 
         links.append({
-            'location': f'{aws_root}/cloudwatch/home?region=us-east-1#logEventViewer:'
+            'location': f'{aws_root}/cloudwatch/home?region={AWS_REGION}#logEventViewer:'
                         f'group={log_group_name};stream={log_stream_name}',
             'text': 'Link to Logs'
         })

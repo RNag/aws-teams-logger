@@ -1,6 +1,6 @@
 import os
 
-__all__ = ['LOG_CFG', 'AWS_ACCOUNT_NAME',
+__all__ = ['LOG_CFG', 'AWS_ACCOUNT_NAME', 'AWS_REGION',
            'TEAMS_LOG_LVL', 'TEAMS_EMAIL',
            'SES_IDENTITY', 'DEV_EMAILS',
            'SOURCE_CODE', 'AWS_LOG_GROUP',
@@ -15,6 +15,9 @@ LOG_CFG = os.getenv('LOG_CFG')
 # If defined, will be used instead of making a call to `iam:ListAccountAliases`
 # to retrieve the alias of the current AWS account.
 AWS_ACCOUNT_NAME = os.getenv('AWS_ACCOUNT_NAME')
+
+# AWS Region, should be automatically set for AWS Lambda functions
+AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
 
 # Minimum log level for messages sent to Teams
 TEAMS_LOG_LVL = os.getenv('TEAMS_LOG_LVL')

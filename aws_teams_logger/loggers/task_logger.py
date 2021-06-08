@@ -1,8 +1,7 @@
-import os
 from typing import Tuple, Dict, Any, List
 
 from .base_logger import _BaseLogger
-from ..constants import AWS_LOG_GROUP, SOURCE_CODE
+from ..constants import AWS_LOG_GROUP, AWS_REGION, SOURCE_CODE
 from ..log import LOG
 from ..models import TaskContext
 
@@ -37,12 +36,12 @@ class TaskLogger(_BaseLogger):
 
         context, links = {}, []
         aws_root = 'https://console.aws.amazon.com'
-        aws_region = os.getenv('AWS_REGION', 'us-east-1')
+        aws_region = AWS_REGION
 
         cluster_name = None
         image_id = image = None
         log_group_name = AWS_LOG_GROUP
-        logs_region_name = 'us-east-1'
+        logs_region_name = aws_region
         log_stream_name = None
 
         if self._task_metadata:

@@ -261,7 +261,7 @@ class _BaseLogger:
 
     @property
     def ses(self):
-        return SESHelper()
+        return SESHelper(AWS_REGION)
 
     @property
     def ses_identity(self):

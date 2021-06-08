@@ -6,6 +6,21 @@ dev
 
 -   \[Short description of non-trivial change.\]
 
+0.5.3 (2021-06-08)
+------------------
+
+**Features and Improvements**
+-   Default region used for the Lambda and Task logger classes was 'us-east-1'; updated to
+    instead use the `AWS_REGION` environment variable which is available for AWS Lambda functions.
+    This should now be applied to the defaults for Lambda and Task contexts, as well as the
+    region in which to call the SES service (defaults to 'us-east-1' if not provided)
+
+0.5.2 (2021-06-07)
+------------------
+
+**Bugfixes**
+-   Fix up docs based on personal testing
+
 0.5.0 (2021-06-07)
 ------------------
 
