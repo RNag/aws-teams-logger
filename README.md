@@ -77,7 +77,7 @@ def other_func():
 from aws_teams_logger import LambdaLogger
 from logging import getLogger
 
-log = getLogger(__name__)
+log = getLogger()
 ll = LambdaLogger(enabled_lvl='WARNING')
 
 def my_handler_1(event, context):
@@ -267,6 +267,7 @@ Note that the resolution order is from left to right.
 | `AWS_ACCOUNT_NAME` | `set_account_name()` | my-account-dev | AWS Account Alias. If defined, will be used instead of making a call to `iam:ListAccountAliases` to retrieve the alias of the current AWS account. |
 | `SOURCE_CODE` | - | https://github.com/abc/repo | A link to the source code repo (such as Bitbucket) for the project. |
 | `AWS_LOG_GROUP` | - | my-cw-log-group | Only applies when the `TaskLogger` decorator is used. Determines the log group to link to in the AWS console. Generally this is not needed to be specified (see note on 'ECS Tasks' below) |
+| `AWS_REGION` | - | us-east-1 | AWS Region, should be automatically set for AWS Lambda functions. Determines the region in which to invoke the SES service, as well as the default region for Lambda and Task contexts. |
 | `LOG_CFG` | - | INFO | If specified, sets up logging via `logging.basicConfig`. Also determines the minimum level at which messages logged by this library show up in CloudWatch. If this is a valid path to a file, the contents will be passed to `logging.config.dictConfig` instead. 
 | `LOCAL_TZ` | - | US/Eastern | User's local time zone, passed in to `pytz.timezone`; used when generating the date/time in the subject for a Teams or Devs email message.
 
