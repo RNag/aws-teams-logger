@@ -1,7 +1,7 @@
 import inspect
 from typing import Dict, Any, List, Tuple, Optional
 
-from .base_logger import _BaseLogger
+from .base_logger import _BaseLogger, _BulkBaseLogger
 from .globals import Globals
 from ..constants import AWS_REGION, SOURCE_CODE
 from ..log import LOG
@@ -142,3 +142,22 @@ class LambdaLogger(_BaseLogger):
         })
 
         return context, links
+
+
+class BulkLambdaLogger(LambdaLogger, _BulkBaseLogger):
+    """
+    This class can be used to decorate a handler for a Python lambda function.
+
+    The `Bulk` logger implementation will send templated emails in bulk,
+    e.g. via the ``ses:SendBulkTemplatedEmail`` API call. Use this
+    implementation when it is expected that multiple logs will be sent to Teams
+    or Outlook, as there will be a performance increase when using a `Bulk`
+    logger.
+
+    For decorating multiple lambda handlers, it is useful to use the method
+    `decorate_all_functions`.
+
+    See the documentation in the base class (:class:`_BaseLogger`) for more
+    info.
+
+    """

@@ -3,8 +3,11 @@ import logging
 import logging.config
 import sys
 import traceback
+from abc import ABC, abstractmethod
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
-from typing import Optional, Tuple, Dict, Any, List, Callable, Union
+from typing import Optional, Tuple, Dict, DefaultDict, Any, List, Callable, Union
 
 import boto3
 from botocore.exceptions import ClientError
@@ -13,13 +16,13 @@ from .globals import Globals
 from ..constants import *
 from ..log import LOG, setup_logging, original_log_method
 from ..models import _BaseContext
-from ..utils.aws.ses import SESHelper
+from ..utils.aws.ses import SESHelper, BulkDestination
 from ..utils.date_util import local_now
 from ..utils.decorators import log_time
 from ..utils.types import get_formatted_message
 
 
-class _BaseLogger:
+class _BaseLogger(ABC):
 
     # Prefix string for the 'subject' used in email messages
     SUBJECT_PREFIX = 'FAILURE'
@@ -66,6 +69,13 @@ class _BaseLogger:
               functions that will be run in a Fargate task. However this can also
               be used to decorate any generic functions as well.
 
+            * :class:`BulkLambdaLogger`, :class:`BulkTaskLogger` - The decorator
+              classes prefixed with `Bulk` are functionally identical to their
+              above counterparts, but prefer to send emails in bulk where
+              possible. As such, emails are sent in batches once each decorated
+              function has completed execution. See the below section on **Bulk
+              Loggers** for more info.
+
         The following environment variables will be used if provided:
 
             * `AWS_ACCOUNT_NAME` - AWS Account Alias (name); if defined, will
@@ -99,9 +109,16 @@ class _BaseLogger:
               Generally this is not needed to be specified (see note on 'ECS
               Tasks' below)
 
-            * `LOG_LEVEL` - The minimum log level for messages logged by this
-              library; only determines if they show up in CloudWatch
-              (Example: 'DEBUG')
+            * `AWS_REGION` - AWS Region, should be automatically set for AWS
+              Lambda functions. Determines the region in which to invoke the SES
+              service, as well as the default region for Lambda and Task
+              contexts. Example: 'us-east-1'
+
+            * `LOG_CFG` - If specified, sets up logging via `logging.basicConfig`.
+              Also determines the minimum level at which messages logged by this
+              library show up in CloudWatch. If this is a valid path to a file,
+              the contents will be passed to `logging.config.dictConfig` instead.
+              Example: 'INFO'
 
             * `LOCAL_TZ` - User's local time zone, passed in to ``pytz.timezone``;
               used when generating the date/time in the subject for a Teams or
@@ -178,6 +195,28 @@ class _BaseLogger:
                         # See logging example under "Simple Usage" section above
                         >>> ...
 
+        Bulk Loggers:
+
+            The `Bulk` logger implementations will send templated emails in bulk,
+            e.g. via the ``ses:SendBulkTemplatedEmail`` API call. Use this
+            implementation when it is expected that multiple logs will be sent to Teams
+            or Outlook, as there will be a performance increase when using a `Bulk`
+            logger.
+
+
+            Sample Usage for Bulk Loggers:
+
+                >>> from aws_teams_logger import BulkLambdaLogger
+
+                >>> log = logging.getLogger()
+
+                >>> @BulkLambdaLogger
+                >>> def my_lambda_handler(event: Dict[str, Any], context: Any):
+                    >>> log.info("This %s message shouldn't be logged", 'Info')
+                    >>> for i in range(5):
+                        >>> log.error('Testing %d ...', i + 1)
+                    >>> ...
+
         """
         # Copy over global defaults
         Globals.ses_identity = ses_identity
@@ -187,12 +226,12 @@ class _BaseLogger:
         setup_logging()
 
         self._func = f
-        functools.update_wrapper(self, self._func)
-
         self.enabled_lvl = self._get_enabled_lvl(enabled_lvl)
         self.logger_cls = logger_cls
         self.log_func_name = log_func_name
         self.raise_ = raise_
+        # Update wrapper function, if needed
+        functools.update_wrapper(self, self._func)
         # noinspection PyTypeChecker
         # This property will be set by the sub-classes.
         self.context: _BaseContext = None
@@ -207,8 +246,6 @@ class _BaseLogger:
         'DEVS_EMAIL', if this value is defined.
 
         """
-        # Get original (e.g. un-decorated) log method
-        log_method = original_log_method(self.logger_cls, self.log_func_name)
         # Validate any required vars here, so we don't run into errors later
         # when the emails need to be sent.
         self._validate_vars_if_needed()
@@ -216,16 +253,13 @@ class _BaseLogger:
         def decorator(func):
             @functools.wraps(func)
             def new_func(*args, **kwargs):
-
                 # Set context object
                 self._set_context(func, *args, **kwargs)
-
-                # Decorate log method - needs to be inside the decorator to avoid
-                # potential bugs when multiple decorated functions are run.
-                setattr(self.logger_cls, self.log_func_name,
-                        self._decorate_log_method(log_method))
+                # Run optional setup method
+                self._setup_func()
 
                 try:
+                    # Call decorated function and return the result
                     return func(*args, **kwargs)
 
                 except Exception as e:
@@ -243,6 +277,10 @@ class _BaseLogger:
                     if self.raise_:
                         raise
 
+                finally:
+                    # Run optional teardown method
+                    self._teardown_func()
+
             return new_func
 
         # We're called without parens - ex. @DecoratorClass
@@ -258,6 +296,30 @@ class _BaseLogger:
             return decorator
 
         return decorator(func)
+
+    def __get__(self, instance, owner):
+        """
+        Fix: make our decorator class a decorator, so that it also works to
+        decorate instance methods.
+
+        https://stackoverflow.com/a/30105234/10237506
+        """
+        from functools import partial
+        return partial(self.__call__, instance)
+
+    def _setup_func(self):
+        """Setup runs *before* the decorated function is called."""
+
+        # Get original (e.g. un-decorated) log method
+        log_method = original_log_method(self.logger_cls, self.log_func_name)
+        # Decorate log method - needs to be inside the decorator to avoid
+        # potential bugs when multiple decorated functions are run.
+        setattr(self.logger_cls, self.log_func_name,
+                self._decorate_log_method(log_method))
+
+    def _teardown_func(self):
+        """Teardown runs *after* the decorated function finishes running."""
+        pass
 
     @property
     def ses(self):
@@ -332,6 +394,7 @@ class _BaseLogger:
 
         return Globals.account_name
 
+    @abstractmethod
     def _set_context(self, func, *args, **kwargs):
         """
         Set the context object, for example a Lambda Context object.
@@ -339,9 +402,8 @@ class _BaseLogger:
         An implementation should set the :attr:`context` object which can extend
         from the :class:`_BaseContext` class.
         """
-        raise NotImplementedError(
-            'Sub-classes should implement this method')
 
+    @abstractmethod
     def _get_context_and_links(self) -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
         """
         Return a two-tuple of (context_data, links)
@@ -350,8 +412,6 @@ class _BaseLogger:
         Teams message, and `links` is a list of dictionary objects each
         containing a "location" and "text" field.
         """
-        raise NotImplementedError(
-            'Sub-classes should implement this method')
 
     def _get_subject(self, dt_format='%m/%d/%Y %I:%M%p') -> str:
         """
@@ -539,12 +599,79 @@ class _BaseLogger:
                                           self.ses_identity, self.ses_identity)
 
         except ClientError as ce:
-            error = ce.response.get('Error', {})
-            error_code = error.get('Code', 'Unknown')
+            self._handle_send_template_err(name, ce)
 
-            if error_code == 'TemplateDoesNotExist':
-                LOG.error(
-                    f'Template {name} does not exist; please call '
-                    f'`upload_templates` to upload the required SES templates.')
-            else:
-                raise
+    @staticmethod
+    def _handle_send_template_err(name: str, ce: ClientError):
+        """Handles errors when sending an email via the SES service"""
+        error = ce.response.get('Error', {})
+        error_code = error.get('Code', 'Unknown')
+
+        if error_code == 'TemplateDoesNotExist':
+            LOG.error(
+                f'Template {name} does not exist; please call '
+                f'`upload_templates` to upload the required SES templates.')
+        else:
+            raise
+
+
+class _BulkBaseLogger(_BaseLogger, ABC):
+    """
+    This is an abstract class that can improve application performance (when
+    several logs are involved) by sending templated emails in bulk.
+
+    See the documentation in the base class (:class:`_BaseLogger`) for more
+    info.
+
+    """
+    def __init__(self, f: Optional[Callable] = None, **kwargs):
+        super().__init__(f, **kwargs)
+        self._template_to_dest: DefaultDict[
+            str, List[BulkDestination]] = defaultdict(list)
+
+    def _send_templated_email(self, name: str,
+                              data: Dict[str, Any],
+                              to_addresses: Union[List[str], str]):
+        """
+        Overrides the method which sends an individual email via SES to instead
+        add it to the list of emails to send in a `batch` once the decorated
+        function completes.
+        """
+        destination = BulkDestination(data, to_addresses)
+        self._template_to_dest[name].append(destination)
+
+    def _teardown_func(self):
+        """Teardown runs *after* the decorated function finishes running."""
+
+        if self._template_to_dest:
+            # AWS recommends instantiating the client, and then passing
+            # them to any sub-threads
+            _ = self.ses.client
+
+            num_workers = min(len(self._template_to_dest), 3)
+
+            # Sends bulk emails to Teams and Outlook in parallel
+            with ThreadPoolExecutor(max_workers=num_workers) as pool:
+                for name, dest in self._template_to_dest.items():
+                    pool.submit(self._send_bulk_templated_email, name, dest)
+
+            # Clear the list of emails to send
+            self._template_to_dest.clear()
+
+    def _send_bulk_templated_email(self, name: str,
+                                   destinations: List[BulkDestination]):
+        """
+        Sends a bulk templated email using SES. If an error occurs, log a
+        message if the error is a known one, otherwise raise the original error.
+
+        :param name: Name of the SES template
+        :param destinations: List of email destinations, each with individual
+          template data
+        """
+        try:
+            self.ses.send_bulk_templated_email(
+                name, destinations,
+                self.ses_identity, self.ses_identity)
+
+        except ClientError as ce:
+            self._handle_send_template_err(name, ce)

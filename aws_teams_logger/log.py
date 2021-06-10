@@ -65,7 +65,7 @@ class OriginalLogAdapter(LoggerAdapter):
     def __init__(self, logger, extra=None):
         super().__init__(logger, extra or {})
 
-    def log(self, level, msg, /, *args, **kwargs):
+    def log(self, level, msg, *args, **kwargs):
         if self.isEnabledFor(level):
             self._orig_log(level, msg, args, **kwargs)
 

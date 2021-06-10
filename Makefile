@@ -11,6 +11,10 @@ test:
     # This runs all of the tests
 	pytest -v tests
 
+perf-test:
+    # This runs all of the performance tests
+	pytest -v -s tests/integration/perf_tests --run-all
+
 test-readme:
     # Build dist but show less output
 	python3 setup.py --quiet sdist bdist_wheel

@@ -46,6 +46,17 @@ Runs only the mock unit tests.
 pytest -v tests/unit
 ```
 
+### Performance _(Optional)_
+
+Most often, you'll only need to run performance tests occasionally and not as part of a build
+or verify step.
+
+To run all performance tests, use:
+
+```shell
+make perf-test
+```
+
 ## Deploying
 
 ### Bump Version

@@ -25,6 +25,14 @@ in addition to being logged to the Teams channel.
     Note that the task needs to be using *platform version 1.4* 
     (see the [note below](#note-on-ecs-tasks) for more details)
 
+
+  * `BulkLambdaLogger`, `BulkTaskLogger` - The decorator classes that start with *Bulk*
+    are functionally identical to their above counterparts, but prefer to send emails in bulk where
+    possible. Use this implementation when it is expected that multiple logs will be sent to Teams
+    or Outlook, as there will be a performance increase with a *Bulk*
+    logger.
+    See the below section on [Bulk Loggers](#bulk-loggers) for more info.
+
 ## Usage
 
 Simple Usage for a stand-alone AWS Lambda function:
@@ -127,6 +135,24 @@ class MyTaskClass:
         # TODO add logic here; see examples for logging above
         ...
 ```
+
+... when multiple emails will be sent using the same template,
+it might be more performant to use a Bulk Logger as shown below:
+
+```python3
+from aws_teams_logger import BulkLambdaLogger
+from logging import getLogger
+
+log = getLogger()
+
+@BulkLambdaLogger
+def my_lambda_handler(event, context):
+    log.info("This %s message shouldn't be sent via email", 'Info')
+    for i in range(5):
+        log.error('Testing %d ...', i + 1)
+    ...
+```
+
 ## Installing Teams Logger and Supported Versions
 
 AWS Teams Logger is available on PyPI:
@@ -291,6 +317,30 @@ set the `Platform Version` for the task to **1.4.0** or higher as
 mentioned in the article below.
 
 https://docs.aws.amazon.com/AmazonECS/latest/userguide/task-metadata-endpoint-v4-fargate.html
+
+## Bulk Loggers
+
+The _Bulk_ logger implementations will send templated emails in bulk,
+e.g. via the ``ses:SendBulkTemplatedEmail`` API call. Use this
+implementation when it is expected that multiple logs will be sent via
+the same SES template, as there will be a performance increase when using a _Bulk_
+logger. Note that there is a separate template for
+sending a message to Teams and Outlook. 
+
+Please see the tests under the [perf_tests/](./tests/integration/perf_tests) directory for a
+performance comparison between the _Individual_ (default) vs _Bulk_ Loggers.
+
+### Considerations
+Some important considerations when choosing a *Bulk* Logger:
+
+* As we want to bulk send emails where possible, emails are sent in batches once each decorated
+  function returns.
+* Because emails are sent in bulk, it's expected that the messages will be out of order.
+For example, a message logged at the end of a decorated function might show up earlier than
+  a message logged at the start of the function.
+  * As a general rule, use the time listed on the `subject` header in the Teams message; this is the time
+    at when the message was originally logged. Note that this might not always align with
+  timestamp that Teams lists for when the message was delivered.
 
 ## Common Issues
 This section describes common errors that might show up, along with the steps to resolve them.

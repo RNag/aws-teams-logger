@@ -6,7 +6,8 @@ Read the Docs here:
 
 """
 
-__all__ = ['SESHelper']
+__all__ = ['SESHelper', 'BulkDestination']
 
 
 from .ses import SESHelper
+from .models import *

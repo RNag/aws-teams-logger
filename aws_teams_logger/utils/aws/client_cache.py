@@ -23,7 +23,7 @@ class ClientCache:
         which defaults to "us-east-1".
 
         `init_client` will automatically initialize the client for the region,
-        and is useful when S3 requests will be made in multiple threads and
+        and is useful when service requests will be made in multiple threads and
         it is desirable to reuse the same client between threads.
 
         """

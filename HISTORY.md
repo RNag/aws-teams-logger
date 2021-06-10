@@ -6,6 +6,18 @@ dev
 
 -   \[Short description of non-trivial change.\]
 
+0.6.0 (2021-06-10)
+------------------
+
+**Features and Improvements**
+-   Add Bulk Logger implementations
+-   Add integration and performance tests for the Bulk Loggers
+
+**Bugfixes**
+
+-   The decorator classes should now work when decorating instance methods
+-   Minor code refactoring to ensure the library works for Python 3.7
+
 0.5.3 (2021-06-08)
 ------------------
 

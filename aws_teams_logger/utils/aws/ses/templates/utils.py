@@ -1,7 +1,7 @@
 import inspect
 import os
 from json import dumps
-from logging import basicConfig
+from logging import basicConfig, getLogger
 from typing import Optional, List
 
 from aws_teams_logger.log import LOG
@@ -15,6 +15,8 @@ module_name = os.path.splitext(template_file)[0]
 
 def setup_logging():
     basicConfig(level='INFO')
+    # Turn down the `botocore` libraries
+    getLogger('botocore').setLevel('WARNING')
 
 
 def get_templates() -> List['TemplateBuilder']:

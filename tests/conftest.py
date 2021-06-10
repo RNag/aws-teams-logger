@@ -4,13 +4,15 @@ Common test fixtures and additional config for `pytest`
 import importlib
 import os
 from dataclasses import dataclass
+from typing import Union, List
 from unittest import mock
 from uuid import uuid4
 
+import pytest
+
 import aws_teams_logger.constants as lc
 import aws_teams_logger.loggers.base_logger as bl
-
-import pytest
+from aws_teams_logger.utils.types import as_list
 
 
 # Default AWS profile - update if needed
@@ -73,9 +75,12 @@ class TestsWithMarkSkipper:
     Util to skip tests with mark, unless cli option provided.
     """
 
-    test_mark: str
+    test_marks: Union[str, List[str]]
     cli_option_name: str
     cli_option_help: str
+
+    def __post_init__(self):
+        self.test_marks = as_list(self.test_marks)
 
     def pytest_addoption_hook(self, parser):
         parser.addoption(
@@ -86,7 +91,8 @@ class TestsWithMarkSkipper:
         )
 
     def pytest_runtest_setup(self, item):
-        if self.test_mark in item.keywords and not item.config.getoption(self.cli_option_name):
+        if any(mark in item.keywords for mark in self.test_marks) \
+                and not item.config.getoption(self.cli_option_name):
             self._skip_test()
 
     def _skip_test(self):
@@ -94,11 +100,12 @@ class TestsWithMarkSkipper:
         pytest.skip(reason)
 
 
-mutative_skipper = TestsWithMarkSkipper(
-    test_mark='mutative',
+mark_skipper = TestsWithMarkSkipper(
+    test_marks=['mutative', 'long'],
     cli_option_name="--run-all",
     cli_option_help="run all test cases, including any potentially destructive tests",
 )
 
-pytest_addoption = mutative_skipper.pytest_addoption_hook
-pytest_runtest_setup = mutative_skipper.pytest_runtest_setup
+
+pytest_addoption = mark_skipper.pytest_addoption_hook
+pytest_runtest_setup = mark_skipper.pytest_runtest_setup

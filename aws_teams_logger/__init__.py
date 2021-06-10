@@ -40,6 +40,8 @@ Please see the docs for additional examples and some important how-to's.
 __all__ = [
     'LambdaLogger',
     'TaskLogger',
+    'BulkLambdaLogger',
+    'BulkTaskLogger',
     'set_account_name',
     'upload_templates',
     'delete_templates'

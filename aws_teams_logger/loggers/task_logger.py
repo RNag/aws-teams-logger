@@ -1,6 +1,6 @@
 from typing import Tuple, Dict, Any, List
 
-from .base_logger import _BaseLogger
+from .base_logger import _BaseLogger, _BulkBaseLogger
 from ..constants import AWS_LOG_GROUP, AWS_REGION, SOURCE_CODE
 from ..log import LOG
 from ..models import TaskContext
@@ -111,3 +111,20 @@ class TaskLogger(_BaseLogger):
             })
 
         return context, links
+
+
+class BulkTaskLogger(TaskLogger, _BulkBaseLogger):
+    """
+    This class can be used to decorate ECS functions or methods, such as ones
+    that will be run in a Fargate task. However this can also be used to
+    decorate any generic functions or methods as well.
+
+    The `Bulk` logger implementation will send templated emails in bulk,
+    e.g. via the ``ses:SendBulkTemplatedEmail`` API call. Use this
+    implementation when it is expected that multiple logs will be sent to Teams
+    or Outlook, as there will be a performance increase when using a `Bulk`
+    logger.
+
+    See the documentation in the base class (:class:`_BaseLogger`) for more
+    info.
+    """

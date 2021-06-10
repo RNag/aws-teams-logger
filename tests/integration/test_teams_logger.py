@@ -1,9 +1,10 @@
+import logging
 from logging import getLogger
 
 import pytest
 
 from aws_teams_logger.log import LOG
-from aws_teams_logger.loggers import LambdaLogger, TaskLogger
+from aws_teams_logger import *
 from .conftest import get_mock_context
 
 
@@ -216,3 +217,18 @@ def test_decorate_all_functions():
 
     assert id_f1 == id(f1), "`decorate_all_functions` modified " \
                             "function `f1`, so we're all good!"
+
+
+def test_bulk_log_to_teams(mock_env):
+    """
+    Simple logging to teams with a Bulk Logger implementation
+    """
+
+    class MyTaskClass:
+        @BulkTaskLogger
+        def __call__(self, *args, **kwargs):
+            log.info("This %s message shouldn't be logged", 'Info')
+            for i in range(2):
+                log.error('BULK: Testing %d ...', i + 1)
+
+    MyTaskClass()()
