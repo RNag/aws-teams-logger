@@ -163,6 +163,11 @@ pip install aws-teams-logger
 
 This package officially supports **Python 3.7** or higher.
 
+## Screenshots
+
+Check out the [docs/images](https://github.com/RNag/aws-teams-logger/tree/main/docs/images) folder for screenshots
+of sample email messages as they show up in MS Teams and Outlook.
+
 ## About
 
 This library decorates (overrides) the base logger methods in the `logging` module to also
@@ -341,11 +346,6 @@ For example, a message logged at the end of a decorated function might show up e
   * As a general rule, use the time listed on the `subject` header in the Teams message; this is the time
     at when the message was originally logged. Note that this might not always align with
   timestamp that Teams lists for when the message was delivered.
-
-## Screenshots
-
-Check out the [docs/images](docs/images) folder for screenshots
-of sample email messages as they show up in MS Teams and Outlook.
 
 ## Common Issues
 This section describes common errors that might show up, along with the steps to resolve them.
