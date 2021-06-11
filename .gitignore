@@ -6,6 +6,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Auto-generated HTML bodies for tests
+email_body.html
+
 # C extensions
 *.so
 

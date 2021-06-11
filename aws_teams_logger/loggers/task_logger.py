@@ -16,8 +16,6 @@ class TaskLogger(_BaseLogger):
     info.
 
     """
-    SUBJECT_PREFIX = 'TASK FAILURE'
-
     FUNCTION_TYPE = 'Task'
 
     _task_metadata = None

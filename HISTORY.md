@@ -6,6 +6,16 @@ dev
 
 -   \[Short description of non-trivial change.\]
 
+0.7.0 (2021-06-11)
+------------------
+
+**Features and Improvements**
+-   Update the subject in emails to include the log level instead of
+    a generic message containing `Failure`
+-   Update the email template for Teams to include the *border-color* for the log message
+-   Add `COLOR_MAP` variable to map the `logging` log levels to color codes
+-   Add screenshots, in the `docs/images` directory
+
 0.6.0 (2021-06-10)
 ------------------
 

@@ -1,0 +1,48 @@
+{
+    "DockerId": "abc123456789-1122334455",
+    "Name": "my-ecr-repo",
+    "DockerName": "my-ecr-repo",
+    "Image": "1234567890.dkr.ecr.us-east-1.amazonaws.com/cb/my-ecr-repo:latest",
+    "ImageID": "sha256:a26d735c210da016d02e103e14d63eb0a207f23d213425760b229ada6de75c13",
+    "Labels": {
+        "com.amazonaws.ecs.cluster": "arn:aws:ecs:us-east-1:1234567890:cluster/my-ecr-repo-Cluster-9C9Y14kFSDGK",
+        "com.amazonaws.ecs.container-name": "my-ecr-repo",
+        "com.amazonaws.ecs.task-arn": "arn:aws:ecs:us-east-1:1234567890:task/my-ecr-repo-Cluster-9C9Y14kFSDGK/a879cc484cbb4a0999471b09e42c9d90",
+        "com.amazonaws.ecs.task-definition-family": "my-ecr-repo-TaskDefinition-XE0MYNGKTOIU",
+        "com.amazonaws.ecs.task-definition-version": "1"
+    },
+    "DesiredStatus": "RUNNING",
+    "KnownStatus": "RUNNING",
+    "Limits": {
+        "CPU": 2
+    },
+    "CreatedAt": "2021-01-22T08:01:29.533516006Z",
+    "StartedAt": "2021-01-22T08:01:29.533516006Z",
+    "Type": "NORMAL",
+    "Networks": [
+        {
+            "NetworkMode": "awsvpc",
+            "IPv4Addresses": [
+                "10.1.2.3"
+            ],
+            "AttachmentIndex": 0,
+            "MACAddress": "02:e9:cb:c3:f1:1b",
+            "IPv4SubnetCIDRBlock": "10.0.10.0/24",
+            "DomainNameServers": [
+                "10.0.0.3"
+            ],
+            "DomainNameSearchList": [
+                "ec2.internal"
+            ],
+            "PrivateDNSName": "ip-10-1-2-3.ec2.internal",
+            "SubnetGatewayIpv4Address": "10.0.1.3/24"
+        }
+    ],
+    "ContainerARN": "arn:aws:ecs:us-east-1:1234567890:container/98e41e9c-2c92-4565-baf0-2d9e59631d3b",
+    "LogOptions": {
+        "awslogs-group": "/ecs/my-ecr-repo",
+        "awslogs-region": "us-east-1",
+        "awslogs-stream": "ecs/my-ecr-repo/a879cc484cbb4a0999471b09e42c9d90"
+    },
+    "LogDriver": "awslogs"
+}

@@ -72,7 +72,7 @@ def other_func():
         empty_dict = {}
         value = empty_dict['missing key']
     except KeyError:
-        log.error('Key missing from `empty_dict`', exc_info=True)
+        log.exception('Key missing from `empty_dict`')
     # Uncaught errors will be logged to both Teams and any Dev Emails
     finally:
         result = 1 / 0
@@ -341,6 +341,11 @@ For example, a message logged at the end of a decorated function might show up e
   * As a general rule, use the time listed on the `subject` header in the Teams message; this is the time
     at when the message was originally logged. Note that this might not always align with
   timestamp that Teams lists for when the message was delivered.
+
+## Screenshots
+
+Check out the [docs/images](docs/images) folder for screenshots
+of sample email messages as they show up in MS Teams and Outlook.
 
 ## Common Issues
 This section describes common errors that might show up, along with the steps to resolve them.

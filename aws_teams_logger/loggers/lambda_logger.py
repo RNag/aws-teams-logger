@@ -19,8 +19,6 @@ class LambdaLogger(_BaseLogger):
     info.
 
     """
-    SUBJECT_PREFIX = 'LAMBDA FAILURE'
-
     FUNCTION_TYPE = 'Lambda'
 
     _decorated = []

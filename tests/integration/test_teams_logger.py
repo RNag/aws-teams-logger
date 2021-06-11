@@ -1,14 +1,14 @@
-import logging
 from logging import getLogger
 
 import pytest
 
-from aws_teams_logger.log import LOG
 from aws_teams_logger import *
-from .conftest import get_mock_context
+from aws_teams_logger.log import LOG
+from .conftest import get_mock_context, patch_ecs_metadata
 
 
 log = getLogger(__name__)
+log.setLevel('DEBUG')
 
 
 def test_basic_log_to_teams(mock_context):
@@ -73,7 +73,7 @@ def test_basic_log_to_teams_with_exc_info(mock_context):
             log.info('%s log', 'Info', exc_info=e)
             # will be logged to Teams and Outlook (default level is WARNING)
             log.warning('Warning log', exc_info=e)
-            log.error('Error log', exc_info=True)
+            log.exception('Error log')
 
     lambda_handler(None, mock_context)
 
@@ -130,7 +130,22 @@ def test_log_to_teams_with_multiple_lambdas(request_id):
     f2(ctx_f2)
 
 
-def test_log_to_teams_with_multiple_tasks():
+def test_log_to_teams_with_task_and_context(mock_ecs_metadata):
+    """
+    Test case to demonstrate intended operation of the `TaskLogger` when
+    the task metadata is provided (via mocks)
+
+    """
+
+    class MyTask:
+        @TaskLogger(enabled_lvl='DEBUG')
+        def run(self):
+            log.debug('Debug message')
+
+    MyTask().run()
+
+
+def test_log_to_teams_with_multiple_tasks(mocker):
     """
     Test case to demonstrate intended operation of the `TaskLogger` when
     decorating and calling more than one function.
@@ -164,7 +179,9 @@ def test_log_to_teams_with_multiple_tasks():
             _ = d['my-key']
 
     FirstTask.run()
+
     with pytest.raises(KeyError):
+        patch_ecs_metadata(mocker)
         SecondTask.run()
 
 

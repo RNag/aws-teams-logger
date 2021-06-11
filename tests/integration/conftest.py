@@ -1,12 +1,29 @@
+import json
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+
+from aws_teams_logger.models import TaskContext
+
+
+TEST_DATA_DIR = Path(__file__).resolve().parents[1] / 'testdata'
 
 
 @pytest.fixture(scope='module', autouse=True)
 def setup_env(mock_env):
     """Setup the mock environment for all test cases in the module."""
     pass
+
+
+@pytest.fixture
+def mock_ecs_metadata(mocker):
+    return patch_ecs_metadata(mocker)
+
+
+def patch_ecs_metadata(mocker):
+    task_metadata = json.load(open(TEST_DATA_DIR / 'task_metadata.json'))
+    return mocker.patch.object(TaskContext, 'get_ecs_metadata', return_value=task_metadata)
 
 
 @pytest.fixture

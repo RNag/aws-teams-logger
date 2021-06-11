@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html>
   <body>
-    <h2>Function Information</h2>
+    {{#if color}}<h2 style="border-top: 2px solid {{color}}; padding-bottom: 3px">{{else}}<h2>{{/if}}
+      Function Information
+    </h2>
     <ul>
       {{#each context}}
       <li><h3>{{@key}}: {{this}}</h3></li>

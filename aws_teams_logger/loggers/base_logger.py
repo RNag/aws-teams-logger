@@ -14,7 +14,7 @@ from botocore.exceptions import ClientError
 
 from .globals import Globals
 from ..constants import *
-from ..log import LOG, setup_logging, original_log_method
+from ..log import LOG, COLOR_MAP, setup_logging, original_log_method
 from ..models import _BaseContext
 from ..utils.aws.ses import SESHelper, BulkDestination
 from ..utils.date_util import local_now
@@ -23,9 +23,6 @@ from ..utils.types import get_formatted_message
 
 
 class _BaseLogger(ABC):
-
-    # Prefix string for the 'subject' used in email messages
-    SUBJECT_PREFIX = 'FAILURE'
 
     # The type or classification of the decorated function
     #
@@ -158,7 +155,7 @@ class _BaseLogger(ABC):
                     >>> empty_dict = {}
                     >>> value = empty_dict['missing key']
                 >>> except KeyError:
-                    >>> log.error('Key missing from `empty_dict`', exc_info=True)
+                    >>> log.exception('Key missing from `empty_dict`')
                 # Uncaught errors will be logged to both Teams and any Dev Emails
                 >>> finally:
                     >>> result = 1 / 0
@@ -230,6 +227,7 @@ class _BaseLogger(ABC):
         self.logger_cls = logger_cls
         self.log_func_name = log_func_name
         self.raise_ = raise_
+        self.subject_prefix = self.FUNCTION_TYPE.upper()
         # Update wrapper function, if needed
         functools.update_wrapper(self, self._func)
         # noinspection PyTypeChecker
@@ -413,14 +411,17 @@ class _BaseLogger(ABC):
         containing a "location" and "text" field.
         """
 
-    def _get_subject(self, dt_format='%m/%d/%Y %I:%M%p') -> str:
+    def _get_subject(self, level_name: str = 'INFO', has_error: bool = False,
+                     dt_format='%m/%d/%Y %I:%M%p') -> str:
         """
         Generate a subject for the Teams or Devs email message.
 
-        Uses the class attribute `SUBJECT_PREFIX` which can optionally be set.
+        Use the instance property :attr:`subject_prefix` which can optionally be set.
         """
+        subject_prefix = f'{self.subject_prefix} {"FAILURE" if has_error else level_name}'
         dt_now = local_now().strftime(dt_format)
-        return f'{self.SUBJECT_PREFIX}: {self.context.function_name}, {dt_now}'
+
+        return f'{subject_prefix}: {self.context.function_name}, {dt_now}'
 
     def _validate_vars_if_needed(self):
         if _BaseLogger._VALIDATED:
@@ -513,7 +514,7 @@ class _BaseLogger(ABC):
 
         return msg
 
-    def _send_to_ses(self, *, msg: Optional[str] = None, lvl: Optional[str] = None,
+    def _send_to_ses(self, *, msg: Optional[str] = None, lvl: Optional[int] = None,
                      error=None):
         """
         Forwards a log message `msg` logged at `lvl` or an exception `error` to
@@ -526,25 +527,29 @@ class _BaseLogger(ABC):
         to those users as well.
 
         """
-        subject = self._get_subject()
+        lvl_name = logging.getLevelName(lvl)
+        has_error = error is not None
+
+        subject = self._get_subject(lvl_name, has_error)
         context, links = self._get_context_and_links()
 
         send_data = {'subject': subject,
                      'context': context,
                      'message': msg,
+                     'color': COLOR_MAP[lvl_name],
                      'links': links}
-        if error:
+
+        if has_error:
             self._notify_dev_emails()
 
             error_msg_with_tb = self._get_msg_with_exc_trace(error, msg)
 
             if lvl:
-                lvl_name = logging._levelToName.get(lvl, logging.ERROR)
-                error_msg_with_tb = f'[{lvl_name.upper()}] {error_msg_with_tb}'
+                error_msg_with_tb = f'[{lvl_name}] {error_msg_with_tb}'
                 send_data['level'] = lvl_name.capitalize()
 
             send_data['error'] = {
-                'class': error[0].__name__,
+                'class': getattr(error[0], '__name__', 'Unknown'),
                 'message': getattr(error[1], 'message', error_msg_with_tb)
             }
 
@@ -557,7 +562,7 @@ class _BaseLogger(ABC):
         if not self.dev_emails:
             return
 
-        subject = self._get_subject()
+        subject = self._get_subject(has_error=True)
         context, links = self._get_context_and_links()
 
         context_data = context.copy()

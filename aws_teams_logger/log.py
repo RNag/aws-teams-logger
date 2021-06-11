@@ -2,10 +2,23 @@ import functools
 import logging
 import logging.config
 import os
+from collections import defaultdict
 from logging import getLogger, Logger, LoggerAdapter
 
 from .constants import LOG_CFG
 
+
+# Maps logging levels to the `border-color` that appears in a Teams message
+# Defaults to color for the 'CRITICAL' level if no mapping is found.
+#
+# Credits: https://github.com/AnesFoufa/python-teams-logger
+COLOR_MAP = defaultdict(lambda: '#8B0000', {
+    'DEBUG': '#0000FF',     # blue
+    'INFO': '#008000',      # green
+    'WARNING': '#FFA500',   # orange
+    'ERROR': '#FF0000',     # red
+    'CRITICAL': '#8B0000',  # dark-red
+})
 
 # Contains the original logger methods, by default for the `logging` module
 #
